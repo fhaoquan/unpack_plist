@@ -5,18 +5,20 @@ import mainui
 from PIL import Image
 from xml.etree import ElementTree
 
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import *
 
 class StartRun(QThread):
+    finished = pyqtSignal()
+    outputWritten = pyqtSignal(str)  # 添加这一行定义信号
     def __init__(self, parent=None):
         super().__init__(parent)
         self.pathname = ''
         self.dir_name = ''
         self.file_name = ''
 
-    def setPathName(self,filename= ''):
-        self.filename = filename
+    def setPathName(self,pathname= ''):
+        self.pathname = pathname
 
     def tree_to_dict(self,tree):
         d = {}
@@ -86,12 +88,12 @@ class StartRun(QThread):
 
         else:
             print("Warning:Wrong data format on parsing: '" + ext + "'!")
-            ui.outputWritten("Warning:Wrong data format on parsing: '" + ext + "'!\n")
+            self.outputWritten.emit("Warning:Wrong data format on parsing: '" + ext + "'!\n")
             exit(1)
 
 
     def gen_png_from_data(self,dir_name, filename, ext):
-        ui.outputWritten("unpack start!\n")
+        self.outputWritten.emit("unpack start!\n")
         openfile = dir_name +"/" + filename
         big_image = Image.open(openfile + ".png")
         frames = self.frames_from_data(openfile, ext)
@@ -111,9 +113,9 @@ class StartRun(QThread):
             if not outfile.endswith('.png'):
                 outfile += '.png'
             print(outfile, "generated")
-            ui.outputWritten(outfile+" generated\n")
+            self.outputWritten.emit(outfile+" generated\n")
             result_image.save(outfile)
-        ui.outputWritten("unpack end!\n")
+        self.outputWritten.emit("unpack end!\n")
 
     def endWith(self,s,*endstring):
         array = map(s.endswith,endstring)
@@ -131,33 +133,59 @@ class StartRun(QThread):
             self.gen_png_from_data(self.dir_name, filename, ext)
         else:
             print("Warning:Make sure you have both " + data_filename + " and " + png_filename + " files in the same directory")
-            ui.outputWritten("Warning:Make sure you have both " + data_filename + " and " + png_filename + " files in the same directory\n")
+            self.outputWritten.emit("Warning:Make sure you have both " + data_filename + " and " + png_filename + " files in the same directory\n")
 
     def run(self):
-        if self.filename == '':
-            ui.outputWritten("Warning:请选择文件！\n")
+        if self.pathname == '':
+            self.outputWritten.emit("Warning:请选择文件！\n")
             return
         # filename = sys.argv[1]
         print("filename1:",self.pathname)
         self.dir_name, self.file_name = os.path.split(self.pathname)
         path_or_name = os.path.splitext(self.file_name)[0]
-
         ext = '.plist'
         self.get_sources_file(path_or_name,ext)
 
-def start_run(filename):
-    start_run_thread.setPathName(filename)
-    start_run_thread.start()
+# def start_run(filename):
+#     start_run_thread.setPathName(filename)
+#     start_run_thread.start()
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.ui = mainui.Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.start_run_thread = StartRun()
+        self.ui.btn_input.clicked.connect(self.ui.choose_png_file)
+        self.ui.btn_output.clicked.connect(self.start_run)
+        self.start_run_thread.finished.connect(self.handle_finished)
+
+        self.start_run_thread.outputWritten.connect(self.handle_output_written)
+
+    def start_run(self):
+        filename = self.ui.lineEdit.text()
+        self.start_run_thread.setPathName(filename)
+        self.start_run_thread.start()
+
+    def handle_finished(self):
+        print("Thread finished")
+
+    def handle_output_written(self, message):
+        print(message)
+
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#     MainWindow = QMainWindow()
+
+#     ui = mainui.Ui_MainWindow()
+#     ui.setupUi(MainWindow)
+#     ui.btn_input.clicked.connect(ui.choose_png_file)
+#     ui.btn_output.clicked.connect(lambda:start_run(ui.lineEdit.text()))
+#     start_run_thread = StartRun()
+#     MainWindow.show()
+#     sys.exit(app.exec_())
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    MainWindow = QMainWindow()
-
-    ui = mainui.Ui_MainWindow()
-    ui.setupUi(MainWindow)
-    ui.btn_input.clicked.connect(ui.choose_png_file)
-    ui.btn_output.clicked.connect(lambda:start_run(ui.lineEdit.text()))
-    start_run_thread = StartRun()
-    MainWindow.show()
+    window = MainWindow()
+    window.show()
     sys.exit(app.exec_())
-
