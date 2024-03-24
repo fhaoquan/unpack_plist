@@ -1,3 +1,12 @@
+'''
+Author: fhaoquan
+Date: 2024-03-23 21:07:12
+LastEditors: fhaoquan
+LastEditTime: 2024-03-24 14:09:19
+Description: 
+
+Copyright (c) 2024 by fhaoquan, All Rights Reserved. 
+'''
 # -*- coding: utf-8 -*-
 
 # Form implementation generated from reading ui file 'mainui.ui'

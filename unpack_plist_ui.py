@@ -11,9 +11,11 @@ from PyQt5.QtWidgets import *
 class StartRun(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.filename = ''
+        self.pathname = ''
+        self.dir_name = ''
+        self.file_name = ''
 
-    def setFilename(self,filename= ''):
+    def setPathName(self,filename= ''):
         self.filename = filename
 
     def tree_to_dict(self,tree):
@@ -88,10 +90,11 @@ class StartRun(QThread):
             exit(1)
 
 
-    def gen_png_from_data(self,filename, ext):
+    def gen_png_from_data(self,dir_name, filename, ext):
         ui.outputWritten("unpack start!\n")
-        big_image = Image.open(filename + ".png")
-        frames = self.frames_from_data(filename, ext)
+        openfile = dir_name +"/" + filename
+        big_image = Image.open(openfile + ".png")
+        frames = self.frames_from_data(openfile, ext)
         for k, v in frames:
             frame = v
             box = frame['box']
@@ -102,9 +105,9 @@ class StartRun(QThread):
             result_image.paste(rect_on_big, result_box, mask=0)
             if frame['rotated']:
                 result_image = result_image.transpose(Image.ROTATE_90)
-            if not os.path.isdir(filename):
-                os.mkdir(filename)
-            outfile = (filename + '/' + k).replace('gift_', '')
+            if not os.path.isdir(openfile):
+                os.mkdir(openfile)
+            outfile = (openfile + '/' + k).replace('gift_', '')
             if not outfile.endswith('.png'):
                 outfile += '.png'
             print(outfile, "generated")
@@ -121,10 +124,11 @@ class StartRun(QThread):
 
 
     def get_sources_file(self,filename,ext):
-        data_filename = filename + ext
-        png_filename = filename + '.png'
+        data_filename = self.dir_name +"/" + filename + ext
+        png_filename = self.dir_name +"/" + filename + '.png'
+        print("get_sources_file",png_filename)
         if os.path.exists(data_filename) and os.path.exists(png_filename):
-            self.gen_png_from_data(filename, ext)
+            self.gen_png_from_data(self.dir_name, filename, ext)
         else:
             print("Warning:Make sure you have both " + data_filename + " and " + png_filename + " files in the same directory")
             ui.outputWritten("Warning:Make sure you have both " + data_filename + " and " + png_filename + " files in the same directory\n")
@@ -134,17 +138,21 @@ class StartRun(QThread):
             ui.outputWritten("Warning:请选择文件！\n")
             return
         # filename = sys.argv[1]
-        path_or_name = self.filename.split('.')[0]
+        print("filename1:",self.pathname)
+        self.dir_name, self.file_name = os.path.split(self.pathname)
+        path_or_name = os.path.splitext(self.file_name)[0]
+
         ext = '.plist'
         self.get_sources_file(path_or_name,ext)
 
 def start_run(filename):
-    start_run_thread.setFilename(filename)
+    start_run_thread.setPathName(filename)
     start_run_thread.start()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     MainWindow = QMainWindow()
+
     ui = mainui.Ui_MainWindow()
     ui.setupUi(MainWindow)
     ui.btn_input.clicked.connect(ui.choose_png_file)
