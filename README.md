@@ -12,6 +12,8 @@ pip install PyQt5 -i https://pypi.douban.com/simple
 
 
 python3 -m pip install Pillow
+
+
 python3 -m pip install PyQt5
 或者
 
